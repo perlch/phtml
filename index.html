@@ -60,6 +60,17 @@
             height: 100%;
             background: white;
             position: relative;
+            transition: width 0.3s ease;
+        }
+
+        #preview-container.fullscreen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100% !important;
+            height: 100% !important;
+            z-index: 1000;
+            display: block !important;
         }
 
         #preview {
@@ -71,19 +82,20 @@
         #close-preview {
             display: none;
             position: absolute;
-            top: 10px;
-            right: 10px;
-            width: 40px;
-            height: 40px;
-            background: #e74c3c;
+            bottom: 20px;
+            right: 20px;
+            width: 45px;
+            height: 45px;
+            background: rgba(231, 76, 60, 0.8);
             color: white;
             border: none;
             border-radius: 50%;
-            font-size: 24px;
-            font-weight: bold;
+            font-size: 28px;
             cursor: pointer;
-            z-index: 1000;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+            z-index: 1001;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            align-items: center;
+            justify-content: center;
         }
 
         .brand-link {
@@ -95,26 +107,10 @@
             transition: opacity 0.2s;
         }
 
-        .brand-link:hover {
-            opacity: 0.7;
-        }
-
         @media (max-width: 768px) {
-            #editor {
-                width: 100%;
-            }
-            #preview-container {
-                display: none;
-                position: fixed;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
-                z-index: 100;
-            }
-            #close-preview {
-                display: block;
-            }
+            #editor { width: 100%; }
+            #preview-container { display: none; }
+            #close-preview { display: flex; }
         }
 
         #fileInput { display: none; }
@@ -126,13 +122,13 @@
         <button class="btn" onclick="document.getElementById('fileInput').click()">+</button>
         <button class="btn" onclick="downloadFile()">↓</button>
         <button class="btn" onclick="runCode()" style="color: #2ecc71; border-color: #2ecc71;">→</button>
+        <button class="btn" onclick="toggleFullscreen()" id="expandBtn">⛶</button>
         <input type="file" id="fileInput" accept=".html" onchange="loadFile(event)">
         <a href="https://github.com/perlch" target="_blank" class="brand-link">perlch html redactor</a>
     </div>
 
     <div class="main-container">
         <textarea id="editor" placeholder="Type your code here..."></textarea>
-        
         <div id="preview-container">
             <button id="close-preview" onclick="closePreview()">×</button>
             <iframe id="preview"></iframe>
@@ -152,12 +148,22 @@
             frameDoc.close();
 
             if (window.innerWidth <= 768) {
-                previewContainer.style.display = 'block';
+                previewContainer.classList.add('fullscreen');
+                document.getElementById('close-preview').style.display = 'flex';
             }
         }
 
+        function toggleFullscreen() {
+            previewContainer.classList.add('fullscreen');
+            document.getElementById('close-preview').style.display = 'flex';
+        }
+
         function closePreview() {
-            previewContainer.style.display = 'none';
+            previewContainer.classList.remove('fullscreen');
+            if (window.innerWidth <= 768) {
+                previewContainer.style.display = 'none';
+            }
+            document.getElementById('close-preview').style.display = 'none';
         }
 
         function downloadFile() {
@@ -170,37 +176,20 @@
         }
 
         function loadFile(event) {
-            const file = event.target.files;
+            const file = event.target.files[0];
             if (!file) return;
             const reader = new FileReader();
             reader.onload = function(e) {
                 editor.value = e.target.result;
-                if (window.innerWidth > 768) runCode();
+                runCode();
             };
             reader.readAsText(file);
+            event.target.value = '';
         }
 
-        editor.value = `<!DOCTYPE html>
-<html>
-<head>
-    <title>perlch preview</title>
-    <style>
-        body { font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background: #f4f4f9; }
-        .container { text-align: center; background: white; padding: 30px; border-radius: 15px; box-shadow: 0 10px 20px rgba(0,0,0,0.1); }
-        h1 { color: #2c3e50; }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h1>perlch html redactor</h1>
-        <p>Build something amazing in 2026!</p>
-    </div>
-</body>
-</html>`;
+        editor.value = `<!DOCTYPE html>\n<html>\n<head>\n<style>\nbody { font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background: #f4f4f9; }\n.container { text-align: center; background: white; padding: 30px; border-radius: 15px; box-shadow: 0 10px 20px rgba(0,0,0,0.1); }\n</style>\n</head>\n<body>\n<div class="container">\n<h1>perlch html redactor</h1>\n<p>Build something amazing in 2026!</p>\n</div>\n</body>\n</html>`;
 
-        if (window.innerWidth > 768) {
-            runCode();
-        }
+        window.onload = () => { if (window.innerWidth > 768) runCode(); };
     </script>
 </body>
 </html>
