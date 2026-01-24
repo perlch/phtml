@@ -23,6 +23,7 @@
             gap: 15px;
             z-index: 10;
             position: relative;
+            border-bottom: 1px solid #3e4f5f;
         }
 
         .btn {
@@ -33,7 +34,10 @@
             cursor: pointer;
             font-size: 20px;
             border-radius: 4px;
+            transition: 0.2s;
         }
+
+        .btn:hover { background: rgba(255,255,255,0.1); }
 
         .main-container {
             display: flex;
@@ -41,8 +45,35 @@
             position: relative;
         }
 
+        .sidebar {
+            width: 200px;
+            background: #252526;
+            border-right: 1px solid #333;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+        }
+
+        .file-item {
+            padding: 10px 15px;
+            color: #ccc;
+            cursor: pointer;
+            font-size: 14px;
+            border-bottom: 1px solid #333;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .file-item:hover { background: #2a2d2e; }
+        .file-item.active {
+            background: #37373d;
+            color: white;
+            border-left: 3px solid #2ecc71;
+        }
+
         #editor {
-            width: 50%;
+            flex-grow: 1;
             height: 100%;
             border: none;
             padding: 15px;
@@ -56,11 +87,10 @@
         }
 
         #preview-container {
-            width: 50%;
+            width: 40%;
             height: 100%;
             background: white;
             position: relative;
-            transition: width 0.3s ease;
         }
 
         #preview-container.fullscreen {
@@ -70,32 +100,18 @@
             width: 100% !important;
             height: 100% !important;
             z-index: 1000;
-            display: block !important;
         }
 
-        #preview {
-            width: 100%;
-            height: 100%;
-            border: none;
-        }
+        #preview { width: 100%; height: 100%; border: none; }
 
         #close-preview {
             display: none;
-            position: absolute;
-            bottom: 20px;
-            right: 20px;
-            width: 45px;
-            height: 45px;
+            position: absolute; bottom: 20px; right: 20px;
+            width: 45px; height: 45px;
             background: rgba(231, 76, 60, 0.8);
-            color: white;
-            border: none;
-            border-radius: 50%;
-            font-size: 28px;
-            cursor: pointer;
-            z-index: 1001;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-            align-items: center;
-            justify-content: center;
+            color: white; border: none; border-radius: 50%;
+            font-size: 28px; cursor: pointer; z-index: 1001;
+            align-items: center; justify-content: center;
         }
 
         .brand-link {
@@ -104,11 +120,10 @@
             font-weight: bold;
             margin-left: auto;
             text-decoration: none;
-            transition: opacity 0.2s;
         }
 
         @media (max-width: 768px) {
-            #editor { width: 100%; }
+            .sidebar { width: 100px; font-size: 12px; }
             #preview-container { display: none; }
             #close-preview { display: flex; }
         }
@@ -124,11 +139,12 @@
         <button class="btn" onclick="runCode()" style="color: #2ecc71; border-color: #2ecc71;">→</button>
         <button class="btn" onclick="toggleFullscreen()" id="expandBtn">⛶</button>
         <input type="file" id="fileInput" accept=".html" onchange="loadFile(event)">
-        <a href="https://github.com/perlch" target="_blank" class="brand-link">perlch html redactor</a>
+        <a href="https://github.com" target="_blank" class="brand-link">perlch redactor 2026</a>
     </div>
 
     <div class="main-container">
-        <textarea id="editor" placeholder="Type your code here..."></textarea>
+        <div class="sidebar" id="fileList"></div>
+        <textarea id="editor" spellcheck="false" placeholder="Type your code here..."></textarea>
         <div id="preview-container">
             <button id="close-preview" onclick="closePreview()">×</button>
             <iframe id="preview"></iframe>
@@ -139,6 +155,31 @@
         const editor = document.getElementById('editor');
         const preview = document.getElementById('preview');
         const previewContainer = document.getElementById('preview-container');
+        const fileListContainer = document.getElementById('fileList');
+
+        let files = {
+            "index.html": `<!DOCTYPE html>\n<html>\n<body style="background: #f4f4f9; text-align: center; font-family: sans-serif; padding-top: 50px;">\n<h1>Welcome to 2026</h1>\n<p>PHTML 2026</p>\n</body>\n</html>`
+        };
+        let currentFile = "index.html";
+
+        function renderFileList() {
+            fileListContainer.innerHTML = '';
+            Object.keys(files).forEach(fileName => {
+                const div = document.createElement('div');
+                div.className = `file-item ${fileName === currentFile ? 'active' : ''}`;
+                div.innerText = fileName;
+                div.onclick = () => switchFile(fileName);
+                fileListContainer.appendChild(div);
+            });
+        }
+
+        function switchFile(fileName) {
+            files[currentFile] = editor.value;
+            currentFile = fileName;
+            editor.value = files[fileName];
+            renderFileList();
+            runCode();
+        }
 
         function runCode() {
             const content = editor.value;
@@ -149,8 +190,36 @@
 
             if (window.innerWidth <= 768) {
                 previewContainer.classList.add('fullscreen');
+                previewContainer.style.display = 'block';
                 document.getElementById('close-preview').style.display = 'flex';
             }
+        }
+
+        function loadFile(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const content = e.target.result;
+                const name = file.name;
+                files[name] = content;
+                currentFile = name;
+                editor.value = content;
+                renderFileList();
+                runCode();
+            };
+            reader.readAsText(file);
+            event.target.value = '';
+        }
+
+        function downloadFile() {
+            const text = editor.value;
+            const blob = new Blob([text], { type: 'text/html' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = currentFile;
+            a.click();
         }
 
         function toggleFullscreen() {
@@ -166,29 +235,8 @@
             document.getElementById('close-preview').style.display = 'none';
         }
 
-        function downloadFile() {
-            const text = editor.value;
-            const blob = new Blob([text], { type: 'text/html' });
-            const a = document.createElement('a');
-            a.href = URL.createObjectURL(blob);
-            a.download = 'index.html';
-            a.click();
-        }
-
-        function loadFile(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                editor.value = e.target.result;
-                runCode();
-            };
-            reader.readAsText(file);
-            event.target.value = '';
-        }
-
-        editor.value = `<!DOCTYPE html>\n<html>\n<head>\n<style>\nbody { font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background: #f4f4f9; }\n.container { text-align: center; background: white; padding: 30px; border-radius: 15px; box-shadow: 0 10px 20px rgba(0,0,0,0.1); }\n</style>\n</head>\n<body>\n<div class="container">\n<h1>perlch html redactor</h1>\n<p>Build something amazing in 2026!</p>\n</div>\n</body>\n</html>`;
-
+        editor.value = files[currentFile];
+        renderFileList();
         window.onload = () => { if (window.innerWidth > 768) runCode(); };
     </script>
 </body>
