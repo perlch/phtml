@@ -90,6 +90,204 @@
         .hl-comm { color: #6a9955; font-style: italic; }
 
         #preview-container { width: 40%; height: 100%; background: white; position: relative; }
+        
+        @media (max-width: 768px) {
+            #preview-container { display: none; }
+            #preview-container.fullscreen { display: block; }
+        }
+
+        #preview-container.fullscreen { position: fixed; top: 0; left: 0; width: 100% !important; height: 100% !important; z-index: 1000; }
+        #preview { width: 100%; height: 100%; border: none; }
+        #close-preview {
+            display: none; position: absolute; bottom: 20px; right: 20px;
+            width: 45px; height: 45px; background: rgba(231, 76, 60, 0.8);
+            color: white; border: none; border-radius: 50%; font-size: 28px;
+            cursor: pointer; z-index: 1001; align-items: center; justify-content: center;
+        }
+        .brand-link { color: #ecf0f1; font-size: 14px; font-weight: bold; margin-left: 10px; text-decoration: none; flex-shrink: 0; }
+        #fileInput { display: none; }
+    </style>
+</head>
+<body>
+
+    <div class="toolbar">
+        <button class="btn" onclick="document.getElementById('fileInput').click()">+</button>
+        <button class="btn" onclick="downloadFile()">↓</button>
+        <button class="btn" onclick="runCode()" style="color: #2ecc71; border-color: #2ecc71;">→</button>
+        <button class="btn" onclick="toggleFullscreen()">⛶</button>
+        
+        <div class="tabs-container" id="fileTabs"></div>
+
+        <input type="file" id="fileInput" accept=".html" onchange="loadFile(event)">
+        <a href="#" class="brand-link">perlch 2026</a>
+    </div>
+
+    <div class="main-container">
+        
+        <div class="editor-wrapper">
+            <pre id="editor-highlight"></pre>
+            <textarea id="editor-input" spellcheck="false"></textarea>
+        </div>
+        <div id="preview-container">
+            <button id="close-preview" onclick="closePreview()">×</button>
+            <iframe id="preview"></iframe>
+        </div>
+    </div>
+
+    <script>
+        const input = document.getElementById('editor-input');
+        const highlight = document.getElementById('editor-highlight');
+        const preview = document.getElementById('preview');
+        const fileTabsContainer = document.getElementById('fileTabs');
+
+        let files = {
+            "index.html": `<!DOCTYPE html>\n<html>\n  <body>\n    <h1 style="color:green">2026</h1>\n    <p>PHTML</p>\n  </body>\n</html>`
+        };
+        let currentFile = "index.html";
+
+        function updateHighlight() {
+            let code = input.value;
+            let highlighted = code
+                .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+                .replace(/(&lt;!--[\s\S]*?--&gt;)/g, '<span class="hl-comm">$1</span>')
+                .replace(/&lt;(\/?[a-zA-Z0-9!]+)([^&gt;]*)&gt;/g, function(match, tagName, attrs) {
+                    return '<span class="hl-tag">&lt;' + tagName + '</span>' + 
+                           '<span class="hl-attr">' + attrs + '</span>' + 
+                           '<span class="hl-tag">&gt;</span>';
+                });
+            
+            highlight.innerHTML = highlighted + (code.endsWith('\n') ? ' ' : '');
+            syncScroll();
+        }
+
+        function syncScroll() {
+            highlight.scrollTop = input.scrollTop;
+            highlight.scrollLeft = input.scrollLeft;
+        }
+
+        input.oninput = updateHighlight;
+        input.onscroll = syncScroll;
+
+        function renderFileList() {
+            fileTabsContainer.innerHTML = '';
+            Object.keys(files).forEach(fileName => {
+                const div = document.createElement('div');
+                div.className = `tab ${fileName === currentFile ? 'active' : ''}`;
+                div.innerText = fileName;
+                div.onclick = () => switchFile(fileName);
+                fileTabsContainer.appendChild(div);
+            });
+        }
+
+        function switchFile(fileName) {
+            files[currentFile] = input.value;
+            currentFile = fileName;
+            input.value = files[fileName];
+            updateHighlight();
+            renderFileList();
+            runCode();
+        }
+
+        function runCode() {
+            const frameDoc = preview.contentDocument || preview.contentWindow.document;
+            frameDoc.open();
+            frameDoc.write(input.value);
+            frameDoc.close();
+        }
+
+        function loadFile(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                files[file.name] = e.target.result;
+                switchFile(file.name);
+            };
+            reader.readAsText(file);
+        }
+
+        function downloadFile() {
+            const blob = new Blob([input.value], { type: 'text/html' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = currentFile;
+            a.click();
+        }
+
+        function toggleFullscreen() {
+            runCode();
+            document.getElementById('preview-container').classList.add('fullscreen');
+            document.getElementById('close-preview').style.display = 'flex';
+        }
+
+        function closePreview() {
+            document.getElementById('preview-container').classList.remove('fullscreen');
+            document.getElementById('close-preview').style.display = 'none';
+        }
+
+        input.value = files[currentFile];
+        updateHighlight();
+        renderFileList();
+        window.onload = () => { if (window.innerWidth > 768) runCode(); };
+    </script>
+</body>
+</html>
+            border-bottom: none;
+            transition: 0.2s;
+            display: flex;
+            align-items: center;
+        }
+        .tab.active {
+            background: #1e1e1e;
+            color: #2ecc71;
+            border-color: #3e4f5f;
+            font-weight: bold;
+        }
+        .tab:hover:not(.active) {
+            background: #3e4f5f;
+            color: #ecf0f1;
+        }
+
+        .btn {
+            background: none; border: 1px solid #ecf0f1;
+            color: #ecf0f1; padding: 5px 12px; cursor: pointer;
+            font-size: 20px; border-radius: 4px; transition: 0.2s;
+            flex-shrink: 0;
+        }
+        .btn:hover { background: rgba(255,255,255,0.1); }
+        .main-container { display: flex; height: calc(100% - 50px); position: relative; }
+        
+        .editor-wrapper {
+            flex-grow: 1; position: relative; background: #1e1e1e;
+            overflow: hidden;
+        }
+
+        #editor-input, #editor-highlight {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            padding: 20px; box-sizing: border-box;
+            font-family: 'Consolas', 'Monaco', monospace; 
+            font-size: 16px; line-height: 1.5; 
+            white-space: pre-wrap; word-wrap: break-word;
+            margin: 0; border: none; outline: none;
+            overflow-y: auto;
+        }
+
+        #editor-input {
+            color: transparent; background: transparent;
+            caret-color: #2ecc71; z-index: 2; resize: none;
+        }
+
+        #editor-highlight {
+            color: #d4d4d4; z-index: 1; pointer-events: none;
+            background: #1e1e1e;
+        }
+
+        .hl-tag { color: #2ecc71; font-weight: bold; }
+        .hl-attr { color: #9cdcfe; }
+        .hl-val { color: #ce9178; }
+        .hl-comm { color: #6a9955; font-style: italic; }
+
+        #preview-container { width: 40%; height: 100%; background: white; position: relative; }
         #preview-container.fullscreen { position: fixed; top: 0; left: 0; width: 100% !important; height: 100% !important; z-index: 1000; }
         #preview { width: 100%; height: 100%; border: none; }
         #close-preview {
